@@ -3,11 +3,14 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:context="http://www.springframework.org/schema/context"
        xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:amq="http://activemq.apache.org/schema/core"
        xsi:schemaLocation="
             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
-            http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd">
-            
+            http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+            http://activemq.apache.org/schema/core
+            http://activemq.apache.org/schema/core/activemq-core.xsd">
+
     <context:annotation-config/>
     <context:component-scan base-package="com.jotadeveloper.spring.web"/>
 
@@ -24,5 +27,49 @@
             </list>
         </property>
     </bean>
+
+     <!-- ACTIVE MQ -->
+     <bean id="jmsFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+        <property name="brokerURL">
+          <value>tcp://192.168.1.37:61616</value>
+        </property>
+     </bean>
+
+    <bean id="queue" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg value="spitter.queue"/>
+    </bean>
+
+    <bean id="topic" class="org.apache.activemq.command.ActiveMQTopic">
+       <constructor-arg value="spitter.topic"/>
+    </bean>
+
+    <bean id="jmsTemplate"
+        class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="jmsFactory" />
+        <property name="receiveTimeout" value="60000" />
+    </bean>
+
+     <bean id="send"
+        class="com.jotadeveloper.spring.jms.SendJMSMessage">
+        <property name="jmsTemplate" ref="jmsTemplate" />
+         <property name="destination" ref="queue" />
+    </bean>
+
+    <bean id="receive"
+        class="com.jotadeveloper.spring.jms.ReceiveJMSMessage">
+        <property name="jmsTemplate" ref="jmsTemplate" />
+    </bean>
+
+     <bean id="gateway" class="com.jotadeveloper.spring.jms.JmsGatewayImpl">
+        <property name="connectionFactory" ref="jmsFactory" />
+    </bean>
+
+    <bean class="org.springframework.jms.listener.SimpleMessageListenerContainer">
+        <property name="connectionFactory" ref="jmsFactory" />
+        <property name="destination" ref="queue" />
+        <property name="messageListener" ref="listenerMDP" />
+    </bean>
+
+   <bean class="com.jotadeveloper.spring.jms.listener.JmsListenerHandler" id="listenerMDP"></bean>
 
 </beans>
